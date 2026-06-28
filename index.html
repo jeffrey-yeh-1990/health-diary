@@ -266,12 +266,10 @@ function App(){
 
   const handleSignIn=async()=>{
     setSignInError("");
-    try{await auth.signInWithPopup(googleProvider);}
-    catch(e){
-      if(e.code==="auth/popup-blocked"){
-        try{await auth.signInWithRedirect(googleProvider);}
-        catch(e2){setSignInError("登入失敗，請再試一次");}
-      }else if(e.code!=="auth/popup-closed-by-user"){
+    try{
+      await auth.signInWithPopup(googleProvider);
+    }catch(e){
+      if(e.code!=="auth/popup-closed-by-user"){
         setSignInError("登入失敗，請再試一次");
       }
     }
