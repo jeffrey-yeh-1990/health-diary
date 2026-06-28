@@ -17,21 +17,70 @@ input,textarea,button{font-family:inherit}
 </head>
 <body>
 <div id="root"></div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey: "AIzaSyDE5yEV8ymHJE5boKSpqSx8XmxcQjuhXAE",
+  authDomain: "health-diary-c8d28.firebaseapp.com",
+  projectId: "health-diary-c8d28",
+  storageBucket: "health-diary-c8d28.firebasestorage.app",
+  messagingSenderId: "528964435339",
+  appId: "1:528964435339:web:2d3c662310880954a5038e"
+});
+const auth = firebase.auth();
+const db = firebase.firestore();
+const googleProvider = new firebase.auth.GoogleAuthProvider();
+</script>
+
+<!-- React + Babel -->
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
 <script type="text/babel">
 const{useState,useEffect,useMemo}=React;
+
 const PARTS=[{id:"skin",zh:"皮膚",c:"#D4845A"},{id:"digestive",zh:"腸胃",c:"#2AA8A0"},{id:"head",zh:"頭部",c:"#8970CC"},{id:"joints",zh:"關節",c:"#4F8ED4"},{id:"eyes",zh:"眼睛",c:"#C8A020"},{id:"nose",zh:"鼻子",c:"#5AB0D8"},{id:"throat",zh:"喉嚨",c:"#D4547A"},{id:"heart",zh:"心臟",c:"#D44040"},{id:"custom",zh:"自訂",c:"#888888",isCustom:true}];
 const SYMS={skin:["過敏","搔癢","疼痛","腫脹","起疹","乾燥","發紅","脫皮"],digestive:["噁心","嘔吐","腹瀉","便秘","脹氣","腹痛","食慾不振"],head:["頭痛","頭暈","偏頭痛","昏沉","耳鳴","注意力不集中"],joints:["疼痛","僵硬","腫脹","無力","發熱","活動受限"],eyes:["乾澀","充血","搔癢","分泌物","視力模糊","畏光"],nose:["流鼻水","鼻塞","打噴嚏","鼻血","嗅覺異常"],throat:["喉嚨痛","咳嗽","痰多","吞嚥困難","沙啞"],heart:["心悸","胸悶","胸痛","喘不過氣","心跳異常"],custom:["疲勞","發燒","寒顫","失眠","水腫","其他"]};
 const WD=["日","一","二","三","四","五","六"];
-const AC=["#3B7A57","#5A8FD4","#D4845A","#8970CC","#D4547A","#2AA8A0","#D44040","#C8A020"];
-const LS={get:(k,fb)=>{try{const v=localStorage.getItem(k);return v!=null?JSON.parse(v):fb;}catch{return fb;}},set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}}};
 const mkSet=()=>({q1Label:"吃藥",q1Color:"#3B7A57",activeParts:[],partColors:Object.fromEntries(PARTS.map(p=>[p.id,p.c])),customLabel:""});
 const dk=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 const fdt=iso=>{if(!iso)return"—";const d=new Date(iso);return`${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;};
-const uid=()=>Math.random().toString(36).slice(2,10);
 
+/* ── Loading Screen ── */
+function LoadingScreen({message}){
+  return(
+    <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"#F2F5F1"}}>
+      <div style={{fontSize:"52px",marginBottom:"16px"}}>🌿</div>
+      <div style={{color:"#9AADA4",fontSize:"15px"}}>{message||"載入中…"}</div>
+    </div>
+  );
+}
+
+/* ── Sign In Screen ── */
+function SignInScreen({onSignIn,error}){
+  return(
+    <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"#F2F5F1",padding:"32px"}}>
+      <div style={{textAlign:"center",marginBottom:"48px"}}>
+        <div style={{fontSize:"60px",marginBottom:"16px"}}>🌿</div>
+        <h1 style={{fontSize:"26px",fontWeight:"700",color:"#2C3E35",margin:"0 0 8px"}}>健康日記</h1>
+        <p style={{color:"#9AADA4",fontSize:"15px",lineHeight:"1.6"}}>每天記錄，掌握自己的身體狀況</p>
+      </div>
+      <button onClick={onSignIn}
+        style={{display:"flex",alignItems:"center",gap:"12px",padding:"16px 28px",background:"#fff",border:"1.5px solid #E0E8E4",borderRadius:"16px",cursor:"pointer",boxShadow:"0 2px 16px rgba(0,0,0,0.08)",fontSize:"16px",fontWeight:"600",color:"#2C3E35",width:"100%",maxWidth:"320px",justifyContent:"center"}}>
+        <svg width="22" height="22" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 2.9l5.7-5.7C34.5 6.5 29.5 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.6-.4-3.9z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19.1 13 24 13c3.1 0 5.8 1.1 8 2.9l5.7-5.7C34.5 6.5 29.5 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.3 26.7 36 24 36c-5.2 0-9.7-3.3-11.3-8H6.3C9.7 35.7 16.3 44 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.2-2.3 4.1-4.1 5.5l6.2 5.2C41.4 35.2 44 30 44 24c0-1.3-.1-2.6-.4-3.9z"/></svg>
+        使用 Google 帳號登入
+      </button>
+      {error&&<p style={{color:"#D44040",fontSize:"13px",marginTop:"16px",textAlign:"center"}}>{error}</p>}
+    </div>
+  );
+}
+
+/* ── Record Modal ── */
 function RecordModal({dateKey,record,settings,activeParts,onClose,onSave}){
   const[q1,setQ1]=useState(record?.q1||false);
   const[q1Notes,setQ1Notes]=useState(record?.q1Notes||"");
@@ -61,7 +110,7 @@ function RecordModal({dateKey,record,settings,activeParts,onClose,onSave}){
               <span style={{fontSize:"16px",fontWeight:"600",color:"#2C3E35"}}>{settings.q1Label}</span>
               <button onClick={()=>setQ1(v=>!v)} style={{padding:"8px 24px",borderRadius:"20px",border:"none",cursor:"pointer",fontWeight:"700",fontSize:"15px",background:q1?settings.q1Color:"#EDF0EC",color:q1?"#fff":"#9AADA4"}}>{q1?"✓ 有":"無"}</button>
             </div>
-            <textarea value={q1Notes} onChange={e=>setQ1Notes(e.target.value)} placeholder="備註（選填）" style={{width:"100%",marginTop:"12px",padding:"10px 12px",border:"1.5px solid #E0E8E4",borderRadius:"10px",fontSize:"14px",resize:"none",outline:"none",fontFamily:"inherit",color:"#2C3E35",background:"#FAFCFB",height:"68px",boxSizing:"border-box"}}/>
+            <textarea value={q1Notes} onChange={e=>setQ1Notes(e.target.value)} placeholder="備註（選填）" style={{width:"100%",marginTop:"12px",padding:"10px 12px",border:"1.5px solid #E0E8E4",borderRadius:"10px",fontSize:"14px",resize:"none",outline:"none",fontFamily:"inherit",color:"#2C3E35",background:"#FAFCFB",height:"68px"}}/>
           </div>
           {activeParts.map((part,idx)=>{
             const color=settings.partColors[part.id];
@@ -81,7 +130,7 @@ function RecordModal({dateKey,record,settings,activeParts,onClose,onSave}){
                 <div style={{display:"flex",gap:"6px",marginBottom:"12px"}}>
                   {[{k:"better",l:"↑ 好一些",bg:"#E8F5EE",tc:"#2D7A50"},{k:"same",l:"→ 差不多",bg:"#F0F3F8",tc:"#4A6FA5"},{k:"worse",l:"↓ 差一些",bg:"#FDEAEA",tc:"#C44040"}].map(t=>(<button key={t.k} onClick={()=>tTrend(part.id,t.k)} style={{flex:1,padding:"7px 2px",borderRadius:"8px",border:"none",cursor:"pointer",fontSize:"12px",fontWeight:"600",background:pd.trend===t.k?t.bg:"#F5F7F4",color:pd.trend===t.k?t.tc:"#B0BDB7"}}>{t.l}</button>))}
                 </div>
-                <textarea value={pd.notes||""} onChange={e=>uNotes(part.id,e.target.value)} placeholder="備註（選填）" style={{width:"100%",padding:"10px 12px",border:"1.5px solid #E0E8E4",borderRadius:"10px",fontSize:"14px",resize:"none",outline:"none",fontFamily:"inherit",color:"#2C3E35",background:"#FAFCFB",height:"68px",boxSizing:"border-box"}}/>
+                <textarea value={pd.notes||""} onChange={e=>uNotes(part.id,e.target.value)} placeholder="備註（選填）" style={{width:"100%",padding:"10px 12px",border:"1.5px solid #E0E8E4",borderRadius:"10px",fontSize:"14px",resize:"none",outline:"none",fontFamily:"inherit",color:"#2C3E35",background:"#FAFCFB",height:"68px"}}/>
               </div>
             );
           })}
@@ -93,10 +142,28 @@ function RecordModal({dateKey,record,settings,activeParts,onClose,onSave}){
   );
 }
 
-function SettingsContent({settings,onUpdate,profiles,curProfile,onSwitchProfile,onExport,onImport}){
+/* ── Settings Content ── */
+function SettingsContent({settings,onUpdate,user,onSignOut,onExport,onImport}){
   const toggle=id=>{const a=settings.activeParts;if(a.includes(id))onUpdate({...settings,activeParts:a.filter(x=>x!==id)});else if(a.length<5)onUpdate({...settings,activeParts:[...a,id]});};
   return(
     <div style={{padding:"16px",display:"flex",flexDirection:"column",gap:"14px",paddingBottom:"80px"}}>
+      {/* Account */}
+      <div>
+        <div style={{fontSize:"11px",fontWeight:"700",color:"#9AADA4",letterSpacing:"1px",marginBottom:"8px"}}>我的帳號</div>
+        <div style={{background:"#fff",borderRadius:"14px",padding:"16px",display:"flex",alignItems:"center",gap:"12px"}}>
+          {user.photoURL
+            ?<img src={user.photoURL} width="44" height="44" style={{borderRadius:"50%",flexShrink:0}} alt=""/>
+            :<div style={{width:"44px",height:"44px",borderRadius:"50%",background:"#3B7A57",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:"700",fontSize:"18px",flexShrink:0}}>{(user.displayName||"U")[0]}</div>
+          }
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:"15px",fontWeight:"600",color:"#2C3E35",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.displayName||"使用者"}</div>
+            <div style={{fontSize:"12px",color:"#9AADA4",marginTop:"2px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.email}</div>
+          </div>
+          <button onClick={onSignOut} style={{padding:"7px 14px",borderRadius:"10px",border:"1.5px solid #E0E8E4",background:"transparent",fontSize:"13px",color:"#7A8C82",cursor:"pointer",flexShrink:0,fontWeight:"600"}}>登出</button>
+        </div>
+      </div>
+
+      {/* Q1 */}
       <div>
         <div style={{fontSize:"11px",fontWeight:"700",color:"#9AADA4",letterSpacing:"1px",marginBottom:"8px"}}>Q1 主要追蹤項目</div>
         <div style={{background:"#fff",borderRadius:"14px",padding:"14px 16px"}}>
@@ -109,6 +176,8 @@ function SettingsContent({settings,onUpdate,profiles,curProfile,onSwitchProfile,
           </div>
         </div>
       </div>
+
+      {/* Body parts */}
       <div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"8px"}}>
           <div style={{fontSize:"11px",fontWeight:"700",color:"#9AADA4",letterSpacing:"1px"}}>追蹤部位（最多 5 個）</div>
@@ -125,23 +194,14 @@ function SettingsContent({settings,onUpdate,profiles,curProfile,onSwitchProfile,
           })}
         </div>
       </div>
-      <div>
-        <div style={{fontSize:"11px",fontWeight:"700",color:"#9AADA4",letterSpacing:"1px",marginBottom:"8px"}}>使用者管理</div>
-        <div style={{background:"#fff",borderRadius:"14px",overflow:"hidden"}}>
-          {profiles.map((p,i)=>(<div key={p.id} style={{display:"flex",alignItems:"center",gap:"12px",padding:"12px 16px",background:p.id===curProfile?.id?"#F2FAF5":"transparent",borderBottom:i<profiles.length-1?"1px solid #F0F5F2":"none"}}>
-            <div style={{width:"32px",height:"32px",borderRadius:"50%",background:p.color,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:"700",fontSize:"14px"}}>{p.name[0]}</div>
-            <span style={{flex:1,fontSize:"15px",fontWeight:p.id===curProfile?.id?"600":"400",color:"#2C3E35"}}>{p.name}</span>
-            {p.id===curProfile?.id?<span style={{fontSize:"12px",color:"#5A8C70",fontWeight:"600"}}>使用中</span>:<button onClick={()=>onSwitchProfile(p.id)} style={{padding:"5px 12px",borderRadius:"12px",border:"1.5px solid #D8E4DC",background:"transparent",fontSize:"12px",color:"#5A8C70",cursor:"pointer",fontWeight:"600"}}>切換</button>}
-          </div>))}
-          <button onClick={()=>onSwitchProfile(null)} style={{width:"100%",padding:"12px 16px",border:"none",background:"transparent",textAlign:"left",color:"#7A8C82",fontSize:"14px",cursor:"pointer"}}>＋ 新增使用者</button>
-        </div>
-      </div>
+
+      {/* Data management */}
       <div>
         <div style={{fontSize:"11px",fontWeight:"700",color:"#9AADA4",letterSpacing:"1px",marginBottom:"8px"}}>資料管理</div>
         <div style={{background:"#fff",borderRadius:"14px",overflow:"hidden"}}>
           <button onClick={onExport} style={{width:"100%",padding:"14px 16px",border:"none",background:"transparent",textAlign:"left",cursor:"pointer",borderBottom:"1px solid #F0F5F2",display:"flex",alignItems:"center",gap:"10px"}}>
             <span style={{fontSize:"18px"}}>📤</span>
-            <div><div style={{fontSize:"15px",color:"#2C3E35",fontWeight:"500"}}>匯出資料</div><div style={{fontSize:"12px",color:"#9AADA4",marginTop:"1px"}}>備份或轉移到其他裝置</div></div>
+            <div><div style={{fontSize:"15px",color:"#2C3E35",fontWeight:"500"}}>匯出資料</div><div style={{fontSize:"12px",color:"#9AADA4",marginTop:"1px"}}>下載備份檔案</div></div>
           </button>
           <button onClick={onImport} style={{width:"100%",padding:"14px 16px",border:"none",background:"transparent",textAlign:"left",cursor:"pointer",display:"flex",alignItems:"center",gap:"10px"}}>
             <span style={{fontSize:"18px"}}>📥</span>
@@ -153,89 +213,150 @@ function SettingsContent({settings,onUpdate,profiles,curProfile,onSwitchProfile,
   );
 }
 
+/* ── Main App ── */
 function App(){
-  const[profiles,setProfiles]=useState(()=>LS.get("hd_profiles",[]));
-  const[curPid,setCurPid]=useState(()=>LS.get("hd_current",null));
-  const[pData,setPData]=useState(()=>{const pid=LS.get("hd_current",null);return pid?LS.get(`hd_${pid}`,{settings:mkSet(),records:{}}):{settings:mkSet(),records:{}};});
-  const[screen,setScreen]=useState(()=>LS.get("hd_current",null)?"calendar":"profiles");
+  const[user,setUser]=useState(undefined); // undefined = still checking
+  const[pData,setPData]=useState({settings:mkSet(),records:{}});
+  const[dataLoading,setDataLoading]=useState(false);
+  const[signInError,setSignInError]=useState("");
+  const[screen,setScreen]=useState("calendar");
   const[month,setMonth]=useState(()=>{const n=new Date();return{y:n.getFullYear(),m:n.getMonth()};});
   const[selDate,setSelDate]=useState(null);
   const[filter,setFilter]=useState(null);
-  const[addProf,setAddProf]=useState(false);
-  const[newName,setNewName]=useState("");
-  const[newColor,setNewColor]=useState(AC[0]);
   const[toast,setToast]=useState("");
   const[showPicker,setShowPicker]=useState(false);
   const[pickerYear,setPickerYear]=useState(month.y);
   const[showExport,setShowExport]=useState(false);
   const[showImport,setShowImport]=useState(false);
   const[importText,setImportText]=useState("");
+  const[saving,setSaving]=useState(false);
 
   const settings=pData.settings||mkSet();
   const records=pData.records||{};
 
-  useEffect(()=>{LS.set("hd_profiles",profiles);},[profiles]);
-  useEffect(()=>{LS.set("hd_current",curPid);},[curPid]);
-  useEffect(()=>{if(curPid)LS.set(`hd_${curPid}`,pData);},[curPid,pData]);
+  // Auth state listener
+  useEffect(()=>{
+    return auth.onAuthStateChanged(async u=>{
+      if(u){
+        setDataLoading(true);
+        try{
+          const doc=await db.collection("users").doc(u.uid).get();
+          if(doc.exists){setPData(doc.data());}
+          else{
+            const def={settings:mkSet(),records:{}};
+            await db.collection("users").doc(u.uid).set(def);
+            setPData(def);
+          }
+        }catch(e){console.error(e);}
+        setDataLoading(false);
+      }
+      setUser(u||null);
+    });
+  },[]);
+
+  const saveToDb=async(newData)=>{
+    if(!user)return;
+    setSaving(true);
+    try{await db.collection("users").doc(user.uid).set(newData);}
+    catch(e){showToast("儲存失敗，請檢查網路");}
+    setSaving(false);
+  };
+
+  const showToast=msg=>{setToast(msg);setTimeout(()=>setToast(""),2500);};
+
+  const handleSignIn=async()=>{
+    setSignInError("");
+    try{await auth.signInWithPopup(googleProvider);}
+    catch(e){
+      if(e.code==="auth/popup-blocked"){
+        try{await auth.signInWithRedirect(googleProvider);}
+        catch(e2){setSignInError("登入失敗，請再試一次");}
+      }else if(e.code!=="auth/popup-closed-by-user"){
+        setSignInError("登入失敗，請再試一次");
+      }
+    }
+  };
+
+  const handleSignOut=async()=>{
+    await auth.signOut();
+    setPData({settings:mkSet(),records:{}});
+    setScreen("calendar");setFilter(null);setSelDate(null);
+  };
+
+  const updateSettings=s=>{
+    const newData={...pData,settings:s};
+    setPData(newData);saveToDb(newData);
+  };
+
+  const saveRecord=(dateKey,q1Val,q1NotesVal,partsVal)=>{
+    const old=pData.records[dateKey];const now=new Date().toISOString();
+    const newData={...pData,records:{...pData.records,[dateKey]:{createdAt:old?.createdAt||now,updatedAt:now,q1:q1Val,q1Notes:q1NotesVal,parts:partsVal}}};
+    setPData(newData);saveToDb(newData);
+    setSelDate(null);showToast("已儲存 ✓");
+  };
+
+  const getExportJson=()=>JSON.stringify({version:1,exportedAt:new Date().toISOString(),settings,records},null,2);
+  const importData=()=>{
+    try{
+      const parsed=JSON.parse(importText);
+      if(parsed.settings&&parsed.records){
+        const newData={settings:parsed.settings,records:parsed.records};
+        setPData(newData);saveToDb(newData);
+        setShowImport(false);setImportText("");showToast("匯入成功 ✓");
+      }else{showToast("格式錯誤，請確認內容");}
+    }catch{showToast("格式錯誤，請確認內容");}
+  };
 
   const activeParts=useMemo(()=>settings.activeParts.map(id=>PARTS.find(p=>p.id===id)).filter(Boolean),[settings.activeParts]);
   const getTagsForDay=key=>{const rec=records[key];if(!rec)return[];const tags=[];if(rec.q1)tags.push({id:"q1",color:settings.q1Color});activeParts.forEach(p=>{const pd=rec.parts?.[p.id];if(pd?.symptoms?.length||pd?.notes?.trim())tags.push({id:p.id,color:settings.partColors[p.id]});});return tags;};
   const isFiltered=key=>{if(!filter)return true;const rec=records[key];if(!rec)return false;if(filter==="q1")return!!rec.q1;const pd=rec.parts?.[filter];return!!(pd?.symptoms?.length||pd?.notes?.trim());};
 
-  const selectProfile=pid=>{const data=LS.get(`hd_${pid}`,{settings:mkSet(),records:{}});setCurPid(pid);setPData(data);setScreen("calendar");setFilter(null);};
-  const createProfile=()=>{if(!newName.trim())return;const p={id:uid(),name:newName.trim(),color:newColor};const updated=[...profiles,p];setProfiles(updated);LS.set("hd_profiles",updated);LS.set(`hd_${p.id}`,{settings:mkSet(),records:{}});selectProfile(p.id);setAddProf(false);setNewName("");setNewColor(AC[updated.length%AC.length]);};
+  // Still checking auth
+  if(user===undefined||dataLoading) return <LoadingScreen message={dataLoading?"讀取資料中…":"載入中…"}/>;
 
-  const saveRecord=(dateKey,q1Val,q1NotesVal,partsVal)=>{
-    setPData(d=>{const old=d.records[dateKey];const now=new Date().toISOString();return{...d,records:{...d.records,[dateKey]:{createdAt:old?.createdAt||now,updatedAt:now,q1:q1Val,q1Notes:q1NotesVal,parts:partsVal}}};});
-    setSelDate(null);setToast("已儲存 ✓");setTimeout(()=>setToast(""),2000);
-  };
-
-  const getExportJson=()=>JSON.stringify({version:1,exportedAt:new Date().toISOString(),settings,records},null,2);
-  const showToast=msg=>{setToast(msg);setTimeout(()=>setToast(""),2500);};
-  const importData=()=>{try{const parsed=JSON.parse(importText);if(parsed.settings&&parsed.records){setPData({settings:parsed.settings,records:parsed.records});setShowImport(false);setImportText("");showToast("匯入成功 ✓");}else{showToast("格式錯誤，請確認內容");}}catch{showToast("格式錯誤，請確認內容");}};
+  // Not signed in
+  if(!user) return <SignInScreen onSignIn={handleSignIn} error={signInError}/>;
 
   const todayK=dk(new Date());
   const firstDay=new Date(month.y,month.m,1).getDay();
   const daysInMonth=new Date(month.y,month.m+1,0).getDate();
-  const curProfile=profiles.find(p=>p.id===curPid);
-
-  if(screen==="profiles"){return(
-    <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px",background:"#F2F5F1"}}>
-      <div style={{textAlign:"center",marginBottom:"32px"}}><div style={{fontSize:"48px",marginBottom:"8px"}}>🌿</div><h1 style={{fontSize:"22px",fontWeight:"700",color:"#2C3E35",margin:"0 0 4px"}}>健康日記</h1><p style={{color:"#9AADA4",fontSize:"14px"}}>選擇使用者</p></div>
-      <div style={{width:"100%",maxWidth:"360px",display:"flex",flexDirection:"column",gap:"10px"}}>
-        {profiles.map(p=>(<button key={p.id} onClick={()=>selectProfile(p.id)} style={{display:"flex",alignItems:"center",gap:"14px",padding:"14px 18px",background:"#fff",border:"none",borderRadius:"16px",cursor:"pointer",boxShadow:"0 2px 10px rgba(0,0,0,0.07)",textAlign:"left"}}><div style={{width:"44px",height:"44px",borderRadius:"50%",background:p.color,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:"700",fontSize:"18px",flexShrink:0}}>{p.name[0]}</div><span style={{fontSize:"16px",fontWeight:"600",color:"#2C3E35",flex:1}}>{p.name}</span><span style={{color:"#B0BDB7",fontSize:"20px"}}>›</span></button>))}
-        {addProf?(<div style={{background:"#fff",borderRadius:"16px",padding:"18px",boxShadow:"0 2px 10px rgba(0,0,0,0.07)"}}>
-          <input value={newName} onChange={e=>setNewName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&createProfile()} placeholder="輸入名稱" autoFocus style={{width:"100%",padding:"11px 14px",border:"1.5px solid #D0DDD6",borderRadius:"10px",fontSize:"15px",outline:"none",marginBottom:"12px"}}/>
-          <div style={{display:"flex",gap:"8px",marginBottom:"14px"}}>{AC.map(c=>(<div key={c} onClick={()=>setNewColor(c)} style={{width:"28px",height:"28px",borderRadius:"50%",background:c,cursor:"pointer",outline:c===newColor?"3px solid #2C3E35":"none",outlineOffset:"2px"}}/>))}</div>
-          <div style={{display:"flex",gap:"8px"}}><button onClick={()=>{setAddProf(false);setNewName("");}} style={{flex:1,padding:"11px",background:"#F2F5F1",border:"none",borderRadius:"10px",cursor:"pointer",fontSize:"14px",color:"#7A8C82"}}>取消</button><button onClick={createProfile} style={{flex:2,padding:"11px",background:"#3B7A57",border:"none",borderRadius:"10px",cursor:"pointer",fontSize:"15px",color:"#fff",fontWeight:"700"}}>建立</button></div>
-        </div>):(<button onClick={()=>setAddProf(true)} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",padding:"14px",background:"transparent",border:"2px dashed #C0D0C8",borderRadius:"16px",cursor:"pointer",color:"#7A8C82",fontSize:"15px"}}>＋ 新增使用者</button>)}
-      </div>
-    </div>
-  );}
 
   return(
     <div style={{minHeight:"100vh",paddingTop:"110px",paddingBottom:"72px",background:"#F2F5F1"}}>
+
       {/* Fixed Header */}
       <div style={{position:"fixed",top:0,left:0,right:0,background:"#fff",padding:"14px 16px 10px",borderBottom:"1px solid #E5EDE7",zIndex:50}}>
         {screen==="calendar"&&(<>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"10px"}}>
             <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
-              <div onClick={()=>setScreen("profiles")} style={{width:"32px",height:"32px",borderRadius:"50%",background:curProfile?.color||"#3B7A57",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:"700",fontSize:"14px",cursor:"pointer",flexShrink:0}}>{curProfile?.name?.[0]||"?"}</div>
+              {user.photoURL
+                ?<img src={user.photoURL} width="32" height="32" style={{borderRadius:"50%",cursor:"pointer",flexShrink:0}} onClick={()=>setScreen("settings")} alt=""/>
+                :<div onClick={()=>setScreen("settings")} style={{width:"32px",height:"32px",borderRadius:"50%",background:"#3B7A57",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:"700",fontSize:"14px",cursor:"pointer",flexShrink:0}}>{(user.displayName||"U")[0]}</div>
+              }
               <div style={{display:"flex",alignItems:"center"}}>
                 <button onClick={()=>setMonth(m=>{const d=new Date(m.y,m.m-1);return{y:d.getFullYear(),m:d.getMonth()};})} style={{background:"none",border:"none",cursor:"pointer",fontSize:"22px",color:"#7A8C82",padding:"0 4px",lineHeight:1}}>‹</button>
                 <span onClick={()=>{setPickerYear(month.y);setShowPicker(true);}} style={{fontSize:"17px",fontWeight:"700",color:"#2C3E35",minWidth:"100px",textAlign:"center",cursor:"pointer",userSelect:"none"}}>{month.y}年 {month.m+1}月</span>
                 <button onClick={()=>setMonth(m=>{const d=new Date(m.y,m.m+1);return{y:d.getFullYear(),m:d.getMonth()};})} style={{background:"none",border:"none",cursor:"pointer",fontSize:"22px",color:"#7A8C82",padding:"0 4px",lineHeight:1}}>›</button>
               </div>
             </div>
-            <button onClick={()=>{const n=new Date();setMonth({y:n.getFullYear(),m:n.getMonth()});setSelDate(dk(n));}} style={{padding:"5px 12px",background:"#3B7A57",border:"none",borderRadius:"16px",color:"#fff",fontSize:"12px",fontWeight:"700",cursor:"pointer"}}>今天</button>
+            <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
+              {saving&&<div style={{fontSize:"11px",color:"#9AADA4"}}>同步中…</div>}
+              <button onClick={()=>{const n=new Date();setMonth({y:n.getFullYear(),m:n.getMonth()});setSelDate(dk(n));}} style={{padding:"5px 12px",background:"#3B7A57",border:"none",borderRadius:"16px",color:"#fff",fontSize:"12px",fontWeight:"700",cursor:"pointer"}}>今天</button>
+            </div>
           </div>
           <div style={{display:"flex",gap:"6px",overflowX:"auto",paddingBottom:"2px"}}>
             {[{id:null,label:"全部",color:null},{id:"q1",label:settings.q1Label,color:settings.q1Color},...activeParts.map(p=>({id:p.id,label:p.isCustom?(settings.customLabel||"自訂"):p.zh,color:settings.partColors[p.id]}))].map(f=>(<button key={String(f.id)} onClick={()=>setFilter(filter===f.id?null:f.id)} style={{padding:"4px 12px",borderRadius:"16px",border:"none",flexShrink:0,cursor:"pointer",fontSize:"12px",fontWeight:"600",whiteSpace:"nowrap",background:filter===f.id?(f.color||"#2C3E35"):"#F0F5F2",color:filter===f.id?"#fff":"#7A8C82"}}>{f.label}</button>))}
           </div>
         </>)}
-        {screen==="settings"&&(<div style={{display:"flex",alignItems:"center",gap:"12px"}}><div style={{width:"32px",height:"32px",borderRadius:"50%",background:curProfile?.color||"#3B7A57",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:"700",fontSize:"14px"}}>{curProfile?.name?.[0]||"?"}</div><span style={{fontSize:"17px",fontWeight:"700",color:"#2C3E35"}}>{curProfile?.name||""} 的設定</span></div>)}
+        {screen==="settings"&&(
+          <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
+            <button onClick={()=>setScreen("calendar")} style={{background:"none",border:"none",cursor:"pointer",fontSize:"22px",color:"#7A8C82",padding:"0 4px",lineHeight:1}}>‹</button>
+            <span style={{fontSize:"17px",fontWeight:"700",color:"#2C3E35"}}>設定</span>
+          </div>
+        )}
       </div>
 
+      {/* Calendar */}
       {screen==="calendar"&&(
         <div style={{padding:"12px 10px 0"}}>
           <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",marginBottom:"4px"}}>{WD.map((d,i)=>(<div key={d} style={{textAlign:"center",fontSize:"12px",fontWeight:"600",padding:"4px 0",color:i===0?"#D44040":i===6?"#4A87C8":"#9AADA4"}}>{d}</div>))}</div>
@@ -244,8 +365,9 @@ function App(){
             {Array.from({length:daysInMonth}).map((_,i)=>{
               const day=i+1;
               const dateKey=`${month.y}-${String(month.m+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
-              const isToday=dateKey===todayK;const isPast=dateKey<todayK;const rec=records[dateKey];
-              const tags=getTagsForDay(dateKey);const dimmed=!!filter&&!isFiltered(dateKey);const noRecord=!rec&&isPast;
+              const isToday=dateKey===todayK;const isPast=dateKey<todayK;
+              const rec=records[dateKey];const tags=getTagsForDay(dateKey);
+              const dimmed=!!filter&&!isFiltered(dateKey);const noRecord=!rec&&isPast;
               return(<button key={day} onClick={()=>setSelDate(dateKey)} style={{aspectRatio:"1",borderRadius:"10px",cursor:"pointer",border:noRecord?"1.5px dashed #C8D4CE":"none",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:"3px",padding:"2px",background:isToday?"#EAF5EE":"transparent",outline:isToday?"2px solid #3B7A57":"none",outlineOffset:"1px",opacity:dimmed?0.2:1}}>
                 <span style={{fontSize:"14px",fontWeight:isToday?"800":"400",lineHeight:1,color:noRecord?"#C8D4CE":isToday?"#3B7A57":"#2C3E35"}}>{day}</span>
                 <div style={{display:"flex",gap:"3px",flexWrap:"wrap",justifyContent:"center",minHeight:"10px"}}>{tags.slice(0,5).map(t=>(<div key={t.id} style={{width:"8px",height:"8px",borderRadius:"50%",background:t.color}}/>))}</div>
@@ -263,13 +385,15 @@ function App(){
         </div>
       )}
 
-      {screen==="settings"&&(<SettingsContent settings={settings} onUpdate={s=>setPData(d=>({...d,settings:s}))} profiles={profiles} curProfile={curProfile} onSwitchProfile={pid=>{if(!pid){setAddProf(true);setScreen("profiles");return;}selectProfile(pid);}} onExport={()=>setShowExport(true)} onImport={()=>setShowImport(true)}/>)}
+      {/* Settings */}
+      {screen==="settings"&&(<SettingsContent settings={settings} onUpdate={updateSettings} user={user} onSignOut={handleSignOut} onExport={()=>setShowExport(true)} onImport={()=>setShowImport(true)}/>)}
 
       {/* Fixed Bottom Tabs */}
       <div style={{position:"fixed",bottom:0,left:0,right:0,background:"#fff",display:"flex",borderTop:"1px solid #E5EDE7",zIndex:50}}>
         {[{id:"calendar",label:"日曆",icon:"📅"},{id:"settings",label:"設定",icon:"⚙️"}].map(tab=>(<button key={tab.id} onClick={()=>setScreen(tab.id)} style={{flex:1,padding:"12px 0 10px",border:"none",background:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:"2px"}}><span style={{fontSize:"20px",lineHeight:1}}>{tab.icon}</span><span style={{fontSize:"11px",fontWeight:screen===tab.id?"700":"400",color:screen===tab.id?"#3B7A57":"#9AADA4"}}>{tab.label}</span></button>))}
       </div>
 
+      {/* Record Modal */}
       {selDate&&(<RecordModal dateKey={selDate} record={records[selDate]} settings={settings} activeParts={activeParts} onClose={()=>setSelDate(null)} onSave={saveRecord}/>)}
 
       {/* Export Modal */}
@@ -280,7 +404,7 @@ function App(){
               <span style={{fontSize:"17px",fontWeight:"700",color:"#2C3E35"}}>匯出資料</span>
               <button onClick={()=>setShowExport(false)} style={{background:"none",border:"none",fontSize:"22px",cursor:"pointer",color:"#7A8C82",padding:0}}>×</button>
             </div>
-            <p style={{fontSize:"13px",color:"#9AADA4",marginBottom:"12px",lineHeight:"1.6"}}>複製以下所有文字，保存到備忘錄或傳給自己，需要時再匯入。</p>
+            <p style={{fontSize:"13px",color:"#9AADA4",marginBottom:"12px",lineHeight:"1.6"}}>複製以下文字保存到備忘錄，或傳給自己做為備份。</p>
             <textarea readOnly value={json} onFocus={e=>e.target.select()} style={{flex:1,minHeight:"160px",padding:"10px 12px",border:"1.5px solid #E0E8E4",borderRadius:"10px",fontSize:"11px",fontFamily:"monospace",resize:"none",outline:"none",color:"#2C3E35",background:"#FAFCFB"}}/>
             <button onClick={()=>{navigator.clipboard?.writeText(json).then(()=>{setShowExport(false);showToast("已複製到剪貼簿 ✓");}).catch(()=>{});}} style={{marginTop:"12px",width:"100%",padding:"15px",background:"#3B7A57",border:"none",borderRadius:"12px",color:"#fff",fontSize:"15px",fontWeight:"700",cursor:"pointer"}}>複製到剪貼簿</button>
           </div>
@@ -295,7 +419,7 @@ function App(){
               <span style={{fontSize:"17px",fontWeight:"700",color:"#2C3E35"}}>匯入資料</span>
               <button onClick={()=>{setShowImport(false);setImportText("");}} style={{background:"none",border:"none",fontSize:"22px",cursor:"pointer",color:"#7A8C82",padding:0}}>×</button>
             </div>
-            <p style={{fontSize:"13px",color:"#E07A50",marginBottom:"12px",lineHeight:"1.6"}}>⚠️ 匯入後會覆蓋目前所有資料，請先確認你已備份。</p>
+            <p style={{fontSize:"13px",color:"#E07A50",marginBottom:"12px",lineHeight:"1.6"}}>⚠️ 匯入後會覆蓋目前所有資料，請先確認已備份。</p>
             <textarea value={importText} onChange={e=>setImportText(e.target.value)} placeholder="將匯出的文字貼在這裡…" style={{flex:1,minHeight:"160px",padding:"10px 12px",border:"1.5px solid #E0E8E4",borderRadius:"10px",fontSize:"11px",fontFamily:"monospace",resize:"none",outline:"none",color:"#2C3E35",background:"#FAFCFB"}}/>
             <button onClick={importData} disabled={!importText.trim()} style={{marginTop:"12px",width:"100%",padding:"15px",background:importText.trim()?"#3B7A57":"#C8D4CE",border:"none",borderRadius:"12px",color:"#fff",fontSize:"15px",fontWeight:"700",cursor:importText.trim()?"pointer":"default"}}>匯入</button>
           </div>
@@ -320,6 +444,7 @@ function App(){
         </div>
       )}
 
+      {/* Toast */}
       {toast&&(<div style={{position:"fixed",top:"20px",left:"50%",transform:"translateX(-50%)",background:"#2C3E35",color:"#fff",padding:"10px 20px",borderRadius:"20px",fontSize:"14px",fontWeight:"600",zIndex:200,pointerEvents:"none"}}>{toast}</div>)}
     </div>
   );
