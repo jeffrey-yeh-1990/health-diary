@@ -34,6 +34,15 @@ firebase.initializeApp({
 const auth = firebase.auth();
 const db = firebase.firestore();
 const googleProvider = new firebase.auth.GoogleAuthProvider();
+
+// 開啟離線快取，沒網路時仍可讀取上次資料
+db.enablePersistence().catch(err => {
+  if (err.code === 'failed-precondition') {
+    console.log('多個分頁同時開啟，離線快取僅在單一分頁生效');
+  } else if (err.code === 'unimplemented') {
+    console.log('此瀏覽器不支援離線快取');
+  }
+});
 </script>
 
 <!-- React + Babel -->
