@@ -91,7 +91,6 @@ function SignInScreen({onSignIn,error}){
 
 /* ── Record Modal ── */
 function RecordModal({dateKey,record,settings,activeParts,onClose,onSave}){
-  const[q1,setQ1]=useState(record?.q1||false);
   const[q1Notes,setQ1Notes]=useState(record?.q1Notes||"");
   const[parts,setParts]=useState(()=>record?.parts?JSON.parse(JSON.stringify(record.parts)):{});
   const tSym=(pid,sym)=>setParts(p=>{const prev=p[pid]?.symptoms||[];return{...p,[pid]:{...p[pid],symptoms:prev.includes(sym)?prev.filter(s=>s!==sym):[...prev,sym]}};});
@@ -114,12 +113,9 @@ function RecordModal({dateKey,record,settings,activeParts,onClose,onSave}){
         </div>
         <div style={{padding:"0 14px",display:"flex",flexDirection:"column",gap:"10px"}}>
           <div style={{background:"#fff",borderRadius:"14px",padding:"14px 16px"}}>
-            <div style={{fontSize:"11px",fontWeight:"700",color:"#9AADA4",letterSpacing:"1px",marginBottom:"10px"}}>Q1 主要追蹤</div>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-              <span style={{fontSize:"16px",fontWeight:"600",color:"#2C3E35"}}>{settings.q1Label}</span>
-              <button onClick={()=>setQ1(v=>!v)} style={{padding:"8px 24px",borderRadius:"20px",border:"none",cursor:"pointer",fontWeight:"700",fontSize:"15px",background:q1?settings.q1Color:"#EDF0EC",color:q1?"#fff":"#9AADA4"}}>{q1?"✓ 有":"無"}</button>
-            </div>
-            <textarea value={q1Notes} onChange={e=>setQ1Notes(e.target.value)} placeholder="備註（選填）" style={{width:"100%",marginTop:"12px",padding:"10px 12px",border:"1.5px solid #E0E8E4",borderRadius:"10px",fontSize:"14px",resize:"none",outline:"none",fontFamily:"inherit",color:"#2C3E35",background:"#FAFCFB",height:"68px"}}/>
+            <div style={{fontSize:"11px",fontWeight:"700",color:"#9AADA4",letterSpacing:"1px",marginBottom:"8px"}}>Q1 主要追蹤</div>
+            <div style={{fontSize:"15px",fontWeight:"600",color:"#2C3E35",marginBottom:"10px"}}>{settings.q1Label}</div>
+            <textarea value={q1Notes} onChange={e=>setQ1Notes(e.target.value)} placeholder="備註（選填）" style={{width:"100%",padding:"10px 12px",border:"1.5px solid #E0E8E4",borderRadius:"10px",fontSize:"14px",resize:"none",outline:"none",fontFamily:"inherit",color:"#2C3E35",background:"#FAFCFB",height:"68px"}}/>
           </div>
           {activeParts.map((part,idx)=>{
             const color=settings.partColors[part.id];
@@ -144,7 +140,7 @@ function RecordModal({dateKey,record,settings,activeParts,onClose,onSave}){
             );
           })}
           {activeParts.length===0&&(<div style={{padding:"24px",textAlign:"center",background:"#fff",borderRadius:"14px"}}><div style={{fontSize:"28px",marginBottom:"8px"}}>⚙️</div><div style={{color:"#9AADA4",fontSize:"14px"}}>尚未設定追蹤部位</div><div style={{color:"#5A8C70",fontSize:"13px",marginTop:"4px",fontWeight:"600"}}>請到「設定」頁面選擇 →</div></div>)}
-          <button onClick={()=>onSave(dateKey,q1,q1Notes,parts)} style={{width:"100%",padding:"16px",background:"#3B7A57",border:"none",borderRadius:"14px",color:"#fff",fontSize:"16px",fontWeight:"700",cursor:"pointer",marginTop:"4px"}}>儲存記錄</button>
+          <button onClick={()=>onSave(dateKey,q1Notes,parts)} style={{width:"100%",padding:"16px",background:"#3B7A57",border:"none",borderRadius:"14px",color:"#fff",fontSize:"16px",fontWeight:"700",cursor:"pointer",marginTop:"4px"}}>儲存記錄</button>
         </div>
       </div>
     </div>
@@ -295,9 +291,9 @@ function App(){
     setPData(newData);saveToDb(newData);
   };
 
-  const saveRecord=(dateKey,q1Val,q1NotesVal,partsVal)=>{
+  const saveRecord=(dateKey,q1NotesVal,partsVal)=>{
     const old=pData.records[dateKey];const now=new Date().toISOString();
-    const newData={...pData,records:{...pData.records,[dateKey]:{createdAt:old?.createdAt||now,updatedAt:now,q1:q1Val,q1Notes:q1NotesVal,parts:partsVal}}};
+    const newData={...pData,records:{...pData.records,[dateKey]:{createdAt:old?.createdAt||now,updatedAt:now,q1Notes:q1NotesVal,parts:partsVal}}};
     setPData(newData);saveToDb(newData);
     setSelDate(null);showToast("已儲存 ✓");
   };
@@ -315,7 +311,7 @@ function App(){
   };
 
   const activeParts=useMemo(()=>settings.activeParts.map(id=>PARTS.find(p=>p.id===id)).filter(Boolean),[settings.activeParts]);
-  const getTagsForDay=key=>{const rec=records[key];if(!rec)return[];const tags=[];if(rec.q1)tags.push({id:"q1",color:settings.q1Color});activeParts.forEach(p=>{const pd=rec.parts?.[p.id];if(pd?.symptoms?.length||pd?.notes?.trim())tags.push({id:p.id,color:settings.partColors[p.id]});});return tags;};
+  const getTagsForDay=key=>{const rec=records[key];if(!rec)return[];const tags=[];if(rec.q1Notes?.trim())tags.push({id:"q1",color:settings.q1Color});activeParts.forEach(p=>{const pd=rec.parts?.[p.id];if(pd?.symptoms?.length||pd?.notes?.trim())tags.push({id:p.id,color:settings.partColors[p.id]});});return tags;};
   const isFiltered=key=>{if(!filter)return true;const rec=records[key];if(!rec)return false;if(filter==="q1")return!!rec.q1;const pd=rec.parts?.[filter];return!!(pd?.symptoms?.length||pd?.notes?.trim());};
 
   // Still checking auth
